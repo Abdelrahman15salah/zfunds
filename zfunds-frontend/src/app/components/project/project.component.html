@@ -1,0 +1,129 @@
+<!-- Project List Section -->
+<div class="container mt-4">
+    <h2>Projects</h2>
+
+    <!-- Search Bar -->
+    <div class="mb-3">
+        <input type="text" class="form-control" placeholder="Search projects..." [(ngModel)]="searchTerm"
+            (input)="searchProjects()">
+    </div>
+
+    <!-- Project Form (only show if admin) -->
+    <!-- <div *ngIf="isAdmin" class="mb-4">
+        <h3>Add New Project</h3>
+        <form [formGroup]="projectForm" (ngSubmit)="createProject()">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <input type="text" class="form-control" formControlName="project_title" placeholder="Project Title">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <input type="text" class="form-control" formControlName="project_category" placeholder="Category">
+                </div>
+            </div>
+            <div class="mb-3">
+                <textarea class="form-control" formControlName="project_description"
+                    placeholder="Project Description"></textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <input type="number" class="form-control" formControlName="goal_amount" placeholder="Goal Amount">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <input type="date" class="form-control" formControlName="start_date">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <input type="date" class="form-control" formControlName="end_date">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" [disabled]="projectForm.invalid">Create Project</button>
+        </form>
+    </div> -->
+
+    <!-- Investment Form Dialog -->
+    <div *ngIf="showInvestmentForm" class="investment-dialog">
+        <h3>Make an Investment</h3>
+        <form (ngSubmit)="processInvestment()">
+            <div class="form-group">
+                <label for="investmentAmount">Investment Amount ($):</label>
+                <input type="number" id="investmentAmount" [(ngModel)]="investmentAmount" name="investmentAmount"
+                    [min]="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="cardNumber">Card Number:</label>
+                <input type="text" id="cardNumber" [(ngModel)]="paymentDetails.cardNumber" name="cardNumber"
+                    placeholder="1234 5678 9012 3456" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="expiryDate">Expiry Date:</label>
+                    <input type="text" id="expiryDate" [(ngModel)]="paymentDetails.expiryDate" name="expiryDate"
+                        placeholder="MM/YY" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="cvv">CVV:</label>
+                    <input type="text" id="cvv" [(ngModel)]="paymentDetails.cvv" name="cvv" placeholder="123" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="cardName">Name on Card:</label>
+                <input type="text" id="cardName" [(ngModel)]="paymentDetails.cardName" name="cardName"
+                    placeholder="John Doe" required>
+            </div>
+
+            <div class="investment-summary">
+                <p>Project: {{ selectedProject?.project_title }}</p>
+                <p>Goal Amount: ${{ selectedProject?.goal_amount }}</p>
+                <p>Raised Amount: ${{ selectedProject?.raised_amount || 0 }}</p>
+                <p>Your Investment: ${{ investmentAmount }}</p>
+            </div>
+
+            <div class="investment-actions">
+                <button type="submit" class="btn btn-success">Confirm Investment</button>
+                <button type="button" class="btn btn-secondary" (click)="cancelInvestment()">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Projects List -->
+    <div class="row">
+        <div class="col-md-4 mb-4" *ngFor="let project of filteredProjects">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ project.project_title }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ project.project_category }}</h6>
+                    <p class="card-text">{{ project.project_description }}</p>
+                    <div class="mb-2">
+                        <strong>Goal Amount:</strong> ${{ project.goal_amount }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Raised Amount:</strong> ${{ project.raised_amount || 0 }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Status:</strong> {{ project.project_status }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Start Date:</strong> {{ project.start_date | date }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>End Date:</strong> {{ project.end_date | date }}
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <!-- Show Invest button for investors -->
+                    <button *ngIf="isInvestor" class="btn btn-success" (click)="showInvestmentDialog(project)">
+                        Invest
+                    </button>
+
+                    <!-- Show delete button for admins -->
+                    <button *ngIf="isAdmin" class="btn btn-danger" (click)="deleteProject(project.project_id)">
+                        Delete Project
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

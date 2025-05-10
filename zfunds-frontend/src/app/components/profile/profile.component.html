@@ -1,0 +1,110 @@
+<div class="profile-container">
+    <h2>Profile Settings</h2>
+
+    <!-- Success Message -->
+    <div *ngIf="successMessage" class="success-message">
+        {{ successMessage }}
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="error-message">
+        {{ errorMessage }}
+    </div>
+
+    <form [formGroup]="profileForm" (ngSubmit)="updateProfile()" [class.loading]="isLoading">
+        <div class="form-group">
+            <label for="user_name">Username</label>
+            <input id="user_name" type="text" formControlName="user_name" placeholder="Enter your username"
+                [class.error-input]="profileForm.get('user_name')?.invalid && profileForm.get('user_name')?.touched" />
+            <div *ngIf="profileForm.get('user_name')?.touched && profileForm.get('user_name')?.invalid"
+                class="error-message">
+                <small>Username is required</small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="user_email">Email</label>
+            <input id="user_email" type="email" formControlName="user_email" placeholder="Enter your email"
+                [class.error-input]="profileForm.get('user_email')?.invalid && profileForm.get('user_email')?.touched" />
+            <div *ngIf="profileForm.get('user_email')?.touched && profileForm.get('user_email')?.invalid"
+                class="error-message">
+                <small *ngIf="profileForm.get('user_email')?.hasError('required')">Email is required</small>
+                <small *ngIf="profileForm.get('user_email')?.hasError('email')">Please enter a valid email</small>
+            </div>
+        </div>
+
+        <!-- <div class="form-group">
+            <label for="user_role">Role</label>
+            <select id="user_role" formControlName="user_role"
+                [class.error-input]="profileForm.get('user_role')?.invalid && profileForm.get('user_role')?.touched">
+                <option value="" disabled>Select your role</option>
+                <option value="entrepreneur">Entrepreneur</option>
+                <option value="investor">Investor</option>
+            </select>
+            <div *ngIf="profileForm.get('user_role')?.touched && profileForm.get('user_role')?.invalid"
+                class="error-message">
+                <small>Role is required</small>
+            </div>
+        </div> -->
+
+        <div class="form-group">
+            <label for="password">New Password (optional)</label>
+            <input id="password" type="password" formControlName="password" placeholder="Enter new password"
+                [class.error-input]="profileForm.get('password')?.invalid && profileForm.get('password')?.touched" />
+            <div *ngIf="profileForm.get('password')?.touched && profileForm.get('password')?.invalid"
+                class="error-message">
+                <small>Password must be at least 4 characters</small>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button type="submit" [disabled]="profileForm.invalid || isLoading">
+                {{ isLoading ? 'Updating...' : 'Update Profile' }}
+            </button>
+            <button type="button" (click)="deleteProfile()" [disabled]="isLoading">
+                Delete Account
+            </button>
+        </div>
+    </form>
+
+    <!-- Entrepreneur Section -->
+    <div *ngIf="userRole === 'entrepreneur'" class="entrepreneur-section">
+        <h3>My Companies and Projects</h3>
+
+        <!-- Companies List -->
+        <div *ngIf="companies.length > 0" class="companies-list">
+            <div *ngFor="let company of companies" class="company-card">
+                <h4>{{ company.company_name }}</h4>
+                <p>Industry: {{ company.industry }}</p>
+                <p>Tax Number: {{ company.tax_number }}</p>
+
+                <!-- Projects for this company -->
+                <div class="projects-list">
+                    <h5>Projects</h5>
+                    <div *ngIf="projects.length > 0">
+                        <div *ngFor="let project of projects" class="project-card">
+                            <h6>{{ project.project_title }}</h6>
+                            <p>{{ project.project_description }}</p>
+                            <div class="project-stats">
+                                <p>Goal Amount: ${{ project.goal_amount }}</p>
+                                <p>Raised Amount: ${{ project.raised_amount }}</p>
+                                <div class="progress-bar">
+                                    <div class="progress"
+                                        [style.width.%]="(project.raised_amount / project.goal_amount) * 100">
+                                        {{ (project.raised_amount / project.goal_amount) * 100 | number:'1.0-0' }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div *ngIf="projects.length === 0" class="no-projects">
+                        No projects found for this company.
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div *ngIf="companies.length === 0" class="no-companies">
+            No companies found.
+        </div>
+    </div>
+</div>
