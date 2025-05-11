@@ -26,7 +26,8 @@ const createProject = async (req, res) => {
     goal_amount,
     start_date,
     end_date,
-    company_id
+    company_id, 
+    project_status
   } = req.body;
 
   try {
@@ -58,7 +59,7 @@ const createProject = async (req, res) => {
         goal_amount,
         start_date,
         end_date,
-        'pending', // Default status
+        project_status,
         company_id
       ]
     );

@@ -12,7 +12,7 @@ const createInvestment = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { investment_amount, company_id } = req.body;
+  const { investment_amount, company_id, user_id, project_id } = req.body;
 
   try {
     // Check if company exists
@@ -27,8 +27,8 @@ const createInvestment = async (req, res) => {
 
     // Create investment
     const [result] = await db.query(
-      'INSERT INTO Investment (investment_amount, company_id) VALUES (?, ?)',
-      [investment_amount, company_id]
+      'INSERT INTO Investment (investment_amount, company_id, user_id, project_id) VALUES (?, ?, ?, ?)',
+      [investment_amount, company_id, user_id, project_id]
     );
 
     if (result.affectedRows === 1) {
@@ -120,9 +120,10 @@ const getInvestmentById = async (req, res) => {
 const getInvestmentsByUserId = async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT i.*, c.company_name
+      SELECT i.*, c.company_name, p.project_title, p.goal_amount, p.raised_amount, p.project_status
       FROM Investment i
       JOIN Company c ON i.company_id = c.company_id
+      JOIN Project p ON i.project_id = p.project_id
       WHERE i.user_id = ?
     `, [req.params.userId]);
 

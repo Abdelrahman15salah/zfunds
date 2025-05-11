@@ -16,7 +16,7 @@ const createPlan = async (req, res) => {
 
   try {
     // Only admins can create plans
-    if (req.user.is_admin !== 'yes') {
+    if (req.user.user_role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to create plans' });
     }
 

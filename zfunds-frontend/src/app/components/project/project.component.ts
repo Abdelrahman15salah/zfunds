@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProjectService } from '../../services/project.service';
+import { InvestmentService } from '../../services/investment.service';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { jwtDecode } from "jwt-decode";
@@ -16,20 +17,27 @@ export class ProjectComponent implements OnInit {
   projects: any[] = [];
   filteredProjects: any[] = [];
   searchTerm: string = '';
+  searchTerm2: string = '';
   userRole: string = '';
   isInvestor: boolean = false;
   isAdmin: boolean = false;
   showInvestmentForm: boolean = false;
   selectedProject: any = null;
   investmentAmount: number = 0;
+  user_id: number = 0;
   paymentDetails = {
     cardNumber: '',
     expiryDate: '',
     cvv: '',
     cardName: ''
   };
+  // paid : boolean = false;
 
-  constructor(private fb: FormBuilder, private projectService: ProjectService) {
+  constructor(
+    private fb: FormBuilder, 
+    private projectService: ProjectService,
+    private investmentService: InvestmentService
+  ) {
     // Get user role from token
     const token = localStorage.getItem('userToken');
     if (token) {
@@ -37,6 +45,7 @@ export class ProjectComponent implements OnInit {
       this.userRole = decodedToken.user_role;
       this.isInvestor = decodedToken.user_role === 'investor';
       this.isAdmin = decodedToken.user_role === 'admin';
+      this.user_id = decodedToken.id;
     }
   }
 
@@ -77,25 +86,28 @@ export class ProjectComponent implements OnInit {
   }
 
   searchProjects() {
-    if (!this.searchTerm.trim()) {
+    const nameSearch = this.searchTerm.toLowerCase().trim();
+    const categorySearch = this.searchTerm2.toLowerCase().trim();
+
+    if (!nameSearch && !categorySearch) {
       this.filteredProjects = this.projects;
       return;
     }
 
-    const searchLower = this.searchTerm.toLowerCase();
-    this.filteredProjects = this.projects.filter(project => 
-      project.project_title.toLowerCase().includes(searchLower) ||
-      project.project_category.toLowerCase().includes(searchLower) ||
-      project.project_description.toLowerCase().includes(searchLower)
-    );
+    this.filteredProjects = this.projects.filter(project => {
+      const nameMatch = !nameSearch || project.project_title.toLowerCase().includes(nameSearch);
+      const categoryMatch = !categorySearch || project.project_category.toLowerCase().includes(categorySearch);
+      return nameMatch && categoryMatch;
+    });
   }
 
   createProject() {
     if (this.projectForm.invalid) return;
     console.log('Creating project with data:', this.projectForm.value);
-    this.projectService.createProject(this.projectForm.value).subscribe({
-      next: res => {
-        console.log('Project created successfully:', res);
+    // if(this.paid){
+      this.projectService.createProject(this.projectForm.value).subscribe({
+        next: res => {
+          console.log('Project created successfully:', res);
         this.projects.push(res);
         this.filteredProjects = [...this.projects];
         this.projectForm.reset();
@@ -105,6 +117,9 @@ export class ProjectComponent implements OnInit {
       }
     });
   }
+  // }else{
+  //   alert('Please pay to create a project');
+  // }}
 
   deleteProject(id: number) {
     if (!this.isAdmin) {
@@ -142,58 +157,54 @@ export class ProjectComponent implements OnInit {
 
   processInvestment() {
     if (!this.selectedProject || !this.investmentAmount) {
-      console.error('Invalid investment attempt:', {
-        project: this.selectedProject,
-        amount: this.investmentAmount
-      });
+      console.error('Invalid investment attempt');
       return;
     }
 
-    console.log('Processing investment:', {
-      projectId: this.selectedProject.project_id,
-      projectTitle: this.selectedProject.project_title,
-      currentRaisedAmount: this.selectedProject.raised_amount,
-      investmentAmount: this.investmentAmount,
-      paymentDetails: {
-        ...this.paymentDetails,
-        cardNumber: '****' + this.paymentDetails.cardNumber.slice(-4) // Only log last 4 digits
+    // Create investment data
+    const investmentData = {
+      investment_amount: this.investmentAmount,
+      company_id: this.selectedProject.company_id,
+      user_id: this.user_id,
+      project_id: this.selectedProject.project_id
+    };
+    console.log(investmentData);
+
+    // Create the investment
+    this.investmentService.createInvestment(investmentData).subscribe({
+      next: (response) => {
+        console.log('Investment created successfully:', response);
+        
+        // Update project's raised amount
+        this.projectService.updateProjectRaisedAmount(
+          this.selectedProject.project_id, 
+          this.investmentAmount
+        ).subscribe({
+          next: (updateResponse) => {
+            console.log('Project raised amount updated:', updateResponse);
+            
+            // Update the project in the local array
+            const index = this.projects.findIndex(p => p.project_id === this.selectedProject.project_id);
+            if (index !== -1) {
+              this.projects[index].raised_amount = Number(this.projects[index].raised_amount || 0) + Number(this.investmentAmount);
+              this.filteredProjects = [...this.projects];
+            }
+
+            // Show success message and reset form
+            alert('Investment processed successfully!');
+            this.resetInvestmentForm();
+          },
+          error: (error) => {
+            console.error('Error updating project raised amount:', error);
+            alert('Error updating project. Please contact support.');
+          }
+        });
+      },
+      error: (error) => {
+        console.error('Error creating investment:', error);
+        alert('Error processing investment. Please try again.');
       }
     });
-
-    // Update the project's raised amount
-    this.projectService.updateProjectRaisedAmount(this.selectedProject.project_id, this.investmentAmount)
-      .subscribe({
-        next: (updatedProject) => {
-          console.log('Investment processed successfully:', {
-            projectId: updatedProject.project_id,
-            oldAmount: this.selectedProject.raised_amount,
-            newAmount: updatedProject.raised_amount,
-            investmentAmount: this.investmentAmount
-          });
-
-          // Update the project in the local array
-          const index = this.projects.findIndex(p => p.project_id === this.selectedProject.project_id);
-          if (index !== -1) {
-            this.projects[index] = updatedProject;
-            this.filteredProjects = [...this.projects];
-            console.log('Local project data updated');
-          } else {
-            console.warn('Project not found in local array after update');
-          }
-          
-          // Show success message and reset form
-          alert('Investment processed successfully!');
-          this.resetInvestmentForm();
-        },
-        error: (error) => {
-          console.error('Error processing investment:', {
-            error: error,
-            projectId: this.selectedProject.project_id,
-            amount: this.investmentAmount
-          });
-          alert('Error processing investment. Please try again.');
-        }
-      });
   }
 
   cancelInvestment() {

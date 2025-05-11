@@ -107,4 +107,70 @@
             No companies found.
         </div>
     </div>
+
+    <!-- Investor Section -->
+    <div *ngIf="userRole === 'investor'" class="investor-section">
+        <h3>My Investments</h3>
+
+        <!-- Loading State -->
+        <div *ngIf="isLoadingInvestments" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Loading investments...</p>
+        </div>
+
+        <!-- Investments List -->
+        <div *ngIf="!isLoadingInvestments && investments.length > 0" class="investments-list">
+            <div *ngFor="let investment of investments" class="investment-card" [@fadeInUp]>
+                <div class="investment-header">
+                    <h4>{{ investment.project_title }}</h4>
+                    <span class="investment-date">{{ investment.created_at | date:'mediumDate' }}</span>
+                </div>
+
+                <div class="investment-details">
+                    <div class="detail-item">
+                        <span class="label">Investment Amount:</span>
+                        <span class="value">${{ investment.investment_amount | number:'1.2-2' }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Project Goal:</span>
+                        <span class="value">${{ investment.goal_amount | number:'1.2-2' }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Raised Amount:</span>
+                        <span class="value">${{ investment.raised_amount | number:'1.2-2' }}</span>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress"
+                            [style.width.%]="(investment.raised_amount / investment.goal_amount) * 100"
+                            [@progressAnimation]>
+                            {{ (investment.raised_amount / investment.goal_amount) * 100 | number:'1.0-0' }}%
+                        </div>
+                    </div>
+                </div>
+
+                <div class="investment-status">
+                    <span class="status-badge" [ngClass]="{
+                        'active': investment.project_status === 'active',
+                        'completed': investment.project_status === 'completed',
+                        'draft': investment.project_status === 'draft'
+                    }">
+                        {{ investment.project_status | titlecase }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Investments Message -->
+        <div *ngIf="!isLoadingInvestments && investments.length === 0" class="no-investments">
+            <div class="empty-state">
+                <i class="fas fa-chart-line"></i>
+                <h4>No Investments Yet</h4>
+                <p>Start investing in projects to see them here.</p>
+                <button class="browse-projects-btn" routerLink="/projects">Browse Projects</button>
+            </div>
+        </div>
+    </div>
 </div>

@@ -2,34 +2,55 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CompanyService } from '../../services/company.service';
 import { ProjectService } from '../../services/project.service';
+import { PlanService } from '../../services/plan.service';
 import { RouterModule, Router } from '@angular/router';
 import { jwtDecode } from 'jwt-decode';
-import { FormGroup, FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormGroup, FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { catchError, finalize } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 
 @Component({
   selector: 'app-company-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, ReactiveFormsModule],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule, FormsModule],
   templateUrl: './company-list.component.html',
   styleUrls: ['./company-list.component.css']
 })
 export class CompanyListComponent implements OnInit {
   companies: any[] = [];
   allProjects: any[] = [];
+  plans: any[] = [];
   currentUserId: number = 0;
   selectedCompanyId: number | null = null;
   showProjects: boolean = false;
   showAddForm: boolean = false;
+  showPaymentForm: boolean = false;
   projectForm!: FormGroup;
   message: { text: string; type: 'success' | 'error' } | null = null;
   isLoading: boolean = false;
   isSubmitting: boolean = false;
+  paid: boolean = false;
+  selectedPlan: any = null;
+  fees: number = 0;
+  paymentDetails = {
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    cardName: ''
+  };
+
+  projectStatuses = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'active', label: 'Active' },
+    { value: 'funding', label: 'Funding' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'pending', label: 'Pending' }
+  ];
 
   constructor(
     private companyService: CompanyService,
     private projectService: ProjectService,
+    private planService: PlanService,
     private fb: FormBuilder,
     private router: Router
   ) {}
@@ -38,6 +59,7 @@ export class CompanyListComponent implements OnInit {
     this.initializeUser();
     this.initializeForm();
     this.loadCompanies();
+    this.loadPlans();
   }
 
   private initializeUser(): void {
@@ -55,6 +77,18 @@ export class CompanyListComponent implements OnInit {
     }
   }
 
+  private loadPlans(): void {
+    this.planService.getPlans().subscribe({
+      next: (data) => {
+        console.log('Loaded plans:', data);
+        this.plans = data;
+      },
+      error: (error) => {
+        this.handleError(error, 'Error loading plans');
+      }
+    });
+  }
+
   private initializeForm(): void {
     this.projectForm = this.fb.group({
       project_title: ['', [Validators.required, Validators.minLength(3)]],
@@ -64,6 +98,9 @@ export class CompanyListComponent implements OnInit {
       start_date: ['', [Validators.required, this.futureDateValidator()]],
       end_date: ['', [Validators.required, this.futureDateValidator()]],
       company_id: [{ value: '', disabled: true }, Validators.required],
+      phone_number: ['', [Validators.required, Validators.pattern('^[0-9]{11}$')]],
+      plan_id: ['', Validators.required],
+      project_status: ['draft', Validators.required]
     }, { validators: this.dateRangeValidator });
   }
 
@@ -169,8 +206,91 @@ export class CompanyListComponent implements OnInit {
     console.log('After toggle - selectedCompanyId:', this.selectedCompanyId);
   }
 
-  createProject(): void {
+  get totalAmount(): number {
+    if (!this.selectedPlan) return 0;
+    const planPrice = Number(this.selectedPlan.plan_price) || 0;
+    const feesAmount = Number(this.fees) || 0;
+    return planPrice + feesAmount;
+  }
+
+  onGoalAmountChange(): void {
+    const goalAmount = Number(this.projectForm.get('goal_amount')?.value) || 0;
+    this.fees = goalAmount * 0.015; // 1.5% of goal amount
+  }
+
+  onPlanSelect(): void {
+    const planId = this.projectForm.get('plan_id')?.value;
+    console.log('Selected plan ID:', planId);
+    console.log('Available plans:', this.plans);
+    
+    if (planId) {
+      this.selectedPlan = this.plans.find(p => p.plan_id === Number(planId));
+      console.log('Found selected plan:', this.selectedPlan);
+    } else {
+      this.selectedPlan = null;
+    }
+  }
+
+  showPaymentDialog(): void {
     if (this.projectForm.invalid) {
+      this.showFormErrors();
+      return;
+    }
+    
+    // Ensure we have a valid plan selected
+    const planId = this.projectForm.get('plan_id')?.value;
+    console.log('Payment dialog - Plan ID:', planId);
+    console.log('Available plans:', this.plans);
+    
+    if (!planId) {
+      this.showMessage('Please select a plan first', 'error');
+      return;
+    }
+    
+    this.selectedPlan = this.plans.find(p => p.plan_id === Number(planId));
+    console.log('Found selected plan for payment:', this.selectedPlan);
+    
+    if (!this.selectedPlan) {
+      this.showMessage('Selected plan not found', 'error');
+      return;
+    }
+    
+    this.showPaymentForm = true;
+  }
+
+  processPayment(): void {
+    if (!this.selectedPlan) {
+      this.showMessage('No plan selected', 'error');
+      return;
+    }
+
+    // Here you would typically integrate with a payment gateway
+    console.log('Processing payment:', {
+      planId: this.selectedPlan.plan_id,
+      planPrice: this.selectedPlan.plan_price,
+      fees: this.fees,
+      totalAmount: this.totalAmount,
+      paymentDetails: this.paymentDetails
+    });
+
+    // Simulate successful payment
+    this.paid = true;
+    this.showPaymentForm = false;
+    this.showMessage('Payment confirmed! You can now create your project.', 'success');
+  }
+
+  cancelPayment(): void {
+    this.showPaymentForm = false;
+    this.paymentDetails = {
+      cardNumber: '',
+      expiryDate: '',
+      cvv: '',
+      cardName: ''
+    };
+  }
+
+  createProject(): void {
+    if (this.projectForm.invalid || !this.paid) {
       this.showFormErrors();
       return;
     }
@@ -181,7 +301,15 @@ export class CompanyListComponent implements OnInit {
       company_id: this.selectedCompanyId
     };
 
+    // Store phone number in JSON file
+    const phoneData = {
+      project_title: projectData.project_title,
+      phone_number: projectData.phone_number
+    };
+console.log(projectData);
+
     this.projectService.createProject(projectData).pipe(
+
       catchError(error => {
         this.handleError(error, 'Error creating project');
         return throwError(() => error);
@@ -195,6 +323,7 @@ export class CompanyListComponent implements OnInit {
         }
         this.projectForm.reset();
         this.showAddForm = false;
+        this.paid = false;
         this.showMessage('Project created successfully', 'success');
       }
     });

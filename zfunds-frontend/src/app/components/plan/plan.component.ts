@@ -44,6 +44,7 @@ export class PlanComponent implements OnInit {
       const decodedToken: any = jwtDecode(token);
       this.userRole = decodedToken.user_role;
       this.isAdmin = decodedToken.user_role === 'admin';
+      console.log(this.userRole);
     }
   }
 

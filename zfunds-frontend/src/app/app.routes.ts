@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './pages/login/login.component';
 import { RegisterComponent } from './pages/register/register.component';
 import { AuthGuard } from './services/auth.guard';
-import { DashboardComponent } from './dashboard/dashboard.component';
+// import { DashboardComponent } from './dashboard/dashboard.component';
 import { CompanyListComponent } from './components/company-list/company-list.component';
 import { CompanyFormComponent } from './components/company-form/company-form.component';
 import { PlanComponent } from './components/plan/plan.component';

@@ -7,13 +7,31 @@ import { RouterModule, Router } from '@angular/router';
 import { jwtDecode } from 'jwt-decode';
 import { CompanyService } from '../../services/company.service';
 import { ProjectService } from '../../services/project.service';
+import { InvestmentService } from '../../services/investment.service';
+import { trigger, transition, style, animate, state } from '@angular/animations';
+import { provideAnimations } from '@angular/platform-browser/animations';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
   imports: [ReactiveFormsModule, CommonModule, RouterModule],
+  providers: [provideAnimations()],
   templateUrl: './profile.component.html',
-  styleUrls: ['./profile.component.css']
+  styleUrls: ['./profile.component.css'],
+  animations: [
+    trigger('fadeInUp', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(20px)' }),
+        animate('0.5s ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ])
+    ]),
+    trigger('progressAnimation', [
+      transition(':enter', [
+        style({ width: '0' }),
+        animate('1s ease-in-out', style({ width: '*' }))
+      ])
+    ])
+  ]
 })
 export class ProfileComponent implements OnInit {
   profileForm!: FormGroup;
@@ -27,6 +45,8 @@ export class ProfileComponent implements OnInit {
   user_id: number = 0;
   companies: any[] = [];
   projects: any[] = [];
+  investments: any[] = [];
+  isLoadingInvestments: boolean = false;
 
   constructor(
     private fb: FormBuilder, 
@@ -34,7 +54,8 @@ export class ProfileComponent implements OnInit {
     private authService: AuthService,
     private router: Router,
     private companyService: CompanyService,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private investmentService: InvestmentService
   ) {
     this.token = localStorage.getItem('userToken') || '';
 
@@ -57,9 +78,11 @@ export class ProfileComponent implements OnInit {
     console.log(this.decodedToken);
     console.log(this.userRole);
     
-    // Load companies and projects if user is entrepreneur
+    // Load data based on user role
     if (this.userRole === 'entrepreneur') {
       this.loadEntrepreneurData();
+    } else if (this.userRole === 'investor') {
+      this.loadInvestorData();
     }
     console.log(this.userRole);
     
@@ -108,6 +131,32 @@ export class ProfileComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading companies:', err);
+      }
+    });
+  }
+
+  loadInvestorData() {
+    this.isLoadingInvestments = true;
+    this.investmentService.getInvestmentsByUserId(this.user_id).subscribe({
+      next: (investments) => {
+        // Group investments by project_id and sum investment_amount
+        const grouped: { [projectId: number]: any } = {};
+        investments.forEach((inv: any) => {
+          if (!grouped[inv.project_id]) {
+            grouped[inv.project_id] = { ...inv };
+          } else {
+            grouped[inv.project_id].investment_amount = Number(grouped[inv.project_id].investment_amount) + Number(inv.investment_amount);
+          }
+        });
+        this.investments = Object.values(grouped);
+        this.isLoadingInvestments = false;
+        console.log(this.investments);
+        console.log(this.user_id);
+      },
+      error: (err) => {
+        console.error('Error loading investments:', err);
+        this.showError('Error loading investment data');
+        this.isLoadingInvestments = false;
       }
     });
   }

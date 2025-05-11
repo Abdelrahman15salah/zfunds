@@ -51,7 +51,7 @@
         <!-- Add Project Form -->
         <div *ngIf="showAddForm && selectedCompanyId === company.company_id" class="add-project-form">
             <h4>Add New Project</h4>
-            <form [formGroup]="projectForm" (ngSubmit)="createProject()">
+            <form [formGroup]="projectForm" (ngSubmit)="showPaymentDialog()">
                 <div class="form-group">
                     <input formControlName="project_title" placeholder="Project Title"
                         [class.error-input]="projectForm.get('project_title')?.invalid && projectForm.get('project_title')?.touched"
@@ -84,10 +84,49 @@
                 <div class="form-group">
                     <input formControlName="goal_amount" type="number" placeholder="Goal Amount"
                         [class.error-input]="projectForm.get('goal_amount')?.invalid && projectForm.get('goal_amount')?.touched"
-                        required />
+                        (input)="onGoalAmountChange()" required />
                     <div *ngIf="projectForm.get('goal_amount')?.invalid && projectForm.get('goal_amount')?.touched"
                         class="error-message">
                         Goal amount must be greater than 0
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <input formControlName="phone_number" placeholder="Phone Number"
+                        [class.error-input]="projectForm.get('phone_number')?.invalid && projectForm.get('phone_number')?.touched"
+                        required />
+                    <div *ngIf="projectForm.get('phone_number')?.invalid && projectForm.get('phone_number')?.touched"
+                        class="error-message">
+                        Please enter a valid 10-digit phone number
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <select formControlName="plan_id" (change)="onPlanSelect()"
+                        [class.error-input]="projectForm.get('plan_id')?.invalid && projectForm.get('plan_id')?.touched"
+                        required>
+                        <option [ngValue]="null">Select a Plan</option>
+                        <option *ngFor="let plan of plans" [ngValue]="plan.plan_id">
+                            {{ plan.plan_description }} - ${{ plan.plan_price }}
+                        </option>
+                    </select>
+                    <div *ngIf="projectForm.get('plan_id')?.invalid && projectForm.get('plan_id')?.touched"
+                        class="error-message">
+                        Please select a plan
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <select formControlName="project_status"
+                        [class.error-input]="projectForm.get('project_status')?.invalid && projectForm.get('project_status')?.touched"
+                        required>
+                        <option *ngFor="let status of projectStatuses" [value]="status.value">
+                            {{ status.label }}
+                        </option>
+                    </select>
+                    <div *ngIf="projectForm.get('project_status')?.invalid && projectForm.get('project_status')?.touched"
+                        class="error-message">
+                        Please select a project status
                     </div>
                 </div>
 
@@ -115,9 +154,69 @@
                     End date must be after start date
                 </div>
 
-                <button type="submit" [disabled]="projectForm.invalid || isSubmitting" class="submit-button">
-                    {{ isSubmitting ? 'Creating...' : 'Create Project' }}
-                </button>
+                <div *ngIf="selectedPlan" class="payment-info">
+                    <p>Plan Price: ${{ selectedPlan?.plan_price || 0 }}</p>
+                    <p>Fees (1.5% of goal amount): ${{ fees }}</p>
+                    <p>Total Amount: ${{ totalAmount }}</p>
+                </div>
+
+                <div class="form-actions">
+                    <div *ngIf="!paid" class="payment-section">
+                        <button type="submit" [disabled]="projectForm.invalid || isSubmitting" class="submit-button">
+                            {{ isSubmitting ? 'Processing...' : 'Proceed to Payment' }}
+                        </button>
+                    </div>
+                    <div *ngIf="paid" class="payment-success">
+                        <p class="success-text">✓ Payment Successful</p>
+                    </div>
+                    <button type="button" [disabled]="!paid || projectForm.invalid || isSubmitting"
+                        (click)="createProject()" class="create-button">
+                        Create Project
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Payment Form -->
+        <div *ngIf="showPaymentForm && selectedPlan" class="payment-form">
+            <h3>Payment Details</h3>
+            <form (ngSubmit)="processPayment()">
+                <div class="payment-summary">
+                    <p>Plan Price: ${{ selectedPlan?.plan_price || 0 }}</p>
+                    <p>Fees: ${{ fees }}</p>
+                    <p>Total Amount: ${{ totalAmount }}</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="cardNumber">Card Number:</label>
+                    <input type="text" id="cardNumber" [(ngModel)]="paymentDetails.cardNumber" name="cardNumber"
+                        placeholder="1234 5678 9012 3456" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="expiryDate">Expiry Date:</label>
+                        <input type="text" id="expiryDate" [(ngModel)]="paymentDetails.expiryDate" name="expiryDate"
+                            placeholder="MM/YY" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cvv">CVV:</label>
+                        <input type="text" id="cvv" [(ngModel)]="paymentDetails.cvv" name="cvv" placeholder="123"
+                            required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="cardName">Name on Card:</label>
+                    <input type="text" id="cardName" [(ngModel)]="paymentDetails.cardName" name="cardName"
+                        placeholder="John Doe" required>
+                </div>
+
+                <div class="payment-actions">
+                    <button type="submit" class="btn btn-success">Pay Now</button>
+                    <button type="button" class="btn btn-secondary" (click)="cancelPayment()">Cancel</button>
+                </div>
             </form>
         </div>
     </li>

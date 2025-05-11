@@ -3,9 +3,17 @@
     <h2>Projects</h2>
 
     <!-- Search Bar -->
-    <div class="mb-3">
-        <input type="text" class="form-control" placeholder="Search projects..." [(ngModel)]="searchTerm"
-            (input)="searchProjects()">
+    <div class="search-container mb-3">
+        <div class="row">
+            <div class="col-md-6">
+                <input type="text" class="form-control" placeholder="Search by project name..." [(ngModel)]="searchTerm"
+                    (input)="searchProjects()">
+            </div>
+            <div class="col-md-6">
+                <input type="text" class="form-control" placeholder="Search by category..." [(ngModel)]="searchTerm2"
+                    (input)="searchProjects()">
+            </div>
+        </div>
     </div>
 
     <!-- Project Form (only show if admin) -->
